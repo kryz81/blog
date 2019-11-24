@@ -3,6 +3,7 @@ In this post, I will show you how to create a small API using **Deno** - the new
 If you don't know what Deno is, check this article: **[Getting started with Deno](https://dev.to/wuz/getting-started-with-deno-e1m).**
 
 **Our goal is to:**
+
 * Create an API which manages users
 * Provide GET, POST, PUT and DELETE routes
 * Save created/updated users to a local JSON file
@@ -14,7 +15,7 @@ The only tool you need to install is Deno itself. Deno supports Typescript out o
 
 You can find the code below on Github: [github.com/kryz81/deno-api-example](https://github.com/kryz81/deno-api-example)
 
-###Step 1: Program structure###
+### Step 1: Program structure
 
 ```console
 handlers
@@ -37,11 +38,14 @@ As you see it looks like a small Node.js web application:
 * **routing.ts** contains API routes
 
 
-###Step 2: Choose a web framework###
+### Step 2: Choose a web framework
+
 There are many great web frameworks for Node.js. The most popular one is **Express**. There is also a modern version of Express - **Koa**. But Deno is not compatible with Node.js, and we cannot use Node.js libraries. In the case of Deno, the choice is currently much smaller, but there is a framework inspired by Koa - **Oak**. Let's use it for our example. If you've never used Koa, don't worry, it looks almost the same as Express.
 
-###Step 3: Create the main file###
+### Step 3: Create the main file
+
 _index.ts_
+
 ```typescript
 import { Application } from "https://deno.land/x/oak/mod.ts";
 import { APP_HOST, APP_PORT } from "./config.ts";
@@ -64,8 +68,10 @@ await app.listen(`${APP_HOST}:${APP_PORT}`);
 In the first line, we use the Deno feature - **importing modules directly from the internet**. Besides that, there is nothing special here. We create an application, add middleware, routes, and finally start the server. Just like in Express/Koa.
 
 
-###Step 4: Create a configuration ###
+### Step 4: Create a configuration
+
 _config.ts_
+
 ```typescript
 const env = Deno.env();
 export const APP_HOST = env.APP_HOST || "127.0.0.1";
@@ -74,9 +80,10 @@ export const DB_PATH = env.DB_PATH || "./db/users.json";
 ```
 Our configuration is flexible, settings are read from the environment, but we also provide default values used during development. **Deno.env()** is an equivalent of Node.js **process.env**.
 
-###Step 5: Add user model ###
+### Step 5: Add user model
 
 _models/user.ts_
+
 ```typescript
 export interface User {
   id: string;
@@ -89,8 +96,10 @@ export interface User {
 
 We need this interface for proper typing.
 
-###Step 6: Add routes ###
+### Step 6: Add routes
+
 _routing.ts_
+
 ```typescript
 import { Router } from "https://deno.land/x/oak/mod.ts";
 
@@ -111,10 +120,13 @@ router
 
 export default router;
 ```
+
 Again, nothing special, we create a router and add routes. It looks almost like a copy/paste from an Express.js application!
 
-###Step 7: Add route handlers###
+### Step 7: Add route handlers
+
 _handlers/getUsers.ts_
+
 ```typescript
 import { getUsers } from "../services/users.ts";
 
@@ -122,9 +134,11 @@ export default async ({ response }) => {
   response.body = await getUsers();
 };
 ```
+
 It returns all users. If you've never used Koa, the **response** object is like **res** in Express. The res object in Express has some methods like **json** or **send**,  to return a response. In Koa/Oak, we need to attach our response value to the **response.body** property.
 
 _handlers/getUserDetails.ts_
+
 ```typescript
 import { getUser } from "../services/users.ts";
 
@@ -147,9 +161,11 @@ export default async ({ params, response }) => {
   response.body = foundUser;
 };
 ```
+
 It returns the user with the given id.
 
 _handlers/createUser.ts_
+
 ```typescript
 import { createUser } from "../services/users.ts";
 
@@ -175,9 +191,11 @@ export default async ({ request, response }) => {
   response.body = { msg: "User created", userId };
 };
 ```
+
 This handler manages user creation.
 
 _handlers/updateUser.ts_
+
 ```typescript
 import { updateUser } from "../services/users.ts";
 
@@ -205,9 +223,11 @@ export default async ({ params, request, response }) => {
   response.body = { msg: "User updated" };
 };
 ```
+
 The update handler checks if the user with the given ID exists and updates user data.
 
 _handlers/deleteUser.ts_
+
 ```typescript
 import { deleteUser, getUser } from "../services/users.ts";
 
@@ -231,11 +251,13 @@ export default async ({ params, response }) => {
   response.body = { msg: "User deleted" };
 };
 ```
+
 This handler deletes a user.
 
 We would also like to handle non-exiting routes and return an error message:
 
 _handlers/notFound.ts_
+
 ```typescript
 export default ({ response }) => {
   response.status = 404;
@@ -243,18 +265,21 @@ export default ({ response }) => {
 };
 ```
 
-###Step 8: Add services###
+### Step 8: Add services
 Before we create the user service, we need to create two small **helper** services.
 
 _services/createId.ts_
+
 ```typescript
 import { v4 as uuid } from "https://deno.land/std/uuid/mod.ts";
 
 export default () => uuid();
 ```
+
 Each new user gets a unique id, and for that, we will use **uuid** module from the Deno standard library.
 
 _services/db.ts_
+
 ```typescript
 import { DB_PATH } from "../config.ts";
 import { User } from "../models/user.ts";
@@ -279,6 +304,7 @@ This service helps us to interact with our fake users' storage, which is a local
 Finally, here is the main service responsible for managing user data:
 
 _services/users.ts_
+
 ```typescript
 import { fetchData, persistData } from "./db.ts";
 import { User } from "../models/user.ts";
@@ -351,10 +377,11 @@ export const deleteUser = async (userId: string): Promise<void> => {
 
 There is a lot of code here, but it's a standard typescript.
 
-###Step 9: Add error handling middleware###
+### Step 9: Add error handling middleware
 What could be the worse that would happen if the user service gave an error? The whole program would crash. To avoid it, we could add **try/catch** block in each handler, but there is a better solution - **add a middleware before all routes and catch all unexpected errors there.**
 
-middlewares/error.ts
+_middlewares/error.ts_
+
 ```typescript
 export default async ({ response }, next) => {
   try {
@@ -366,10 +393,11 @@ export default async ({ response }, next) => {
 };
 ```
 
-###Step 10: Add example data ###
+### Step 10: Add example data
 Before we run our program we will add some example data.
 
 _db/users.json_
+
 ```json
 [
   {
@@ -390,6 +418,7 @@ _db/users.json_
 ```
 
 **That's all. Great! Now we are ready to run our API:**
+
 ```
 deno -A index.ts
 ```
@@ -397,6 +426,7 @@ deno -A index.ts
 The "A" flag means that we don't need to grant permissions on the program run manually. For development purposes, we will allow all of them. Keep in mind that it wouldn't be safe to do it in the production environment.
 
 You should see a lot of **Download** and **Compile** lines, finally we see:
+
 ```
 Listening on 4000...
 ```
@@ -404,12 +434,14 @@ Listening on 4000...
 ## Summary
 
 **What did we use:**
+
 * Global **Deno** object to write to and read files
 * **uuid** from the Deno standard library to create a unique id
 * **oak** - a third-party framework inspired by Node.js Koa framework
 * The rest ist pure typescript, objects such as **TextEncoder** or **JSON** are standard Javascript objects
 
 **How does this differ from Node.js:**
+
 * We don't need to install and configure the typescript compiler or other tools like ts-node. We can just run the program using **deno index.ts**
 * We import all external modules directly in the code and don't need to install them before we start to implement our application
 * There is no package.json and package-lock.json
